@@ -1,0 +1,13 @@
+{
+  "name": "daily-feedbox",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The daily Feedbox brief, built from markdown",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

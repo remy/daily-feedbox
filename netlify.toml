@@ -1,0 +1,8 @@
+# The markdown in briefs/ is the source of truth; build.js renders the site.
+# No dependencies, so there is nothing to install — Netlify just runs the build.
+[build]
+  command = "node build.js"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
