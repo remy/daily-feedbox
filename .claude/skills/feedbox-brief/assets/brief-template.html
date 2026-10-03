@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{PAGE_TITLE}}</title>
+<style>
+/* ---------------------------------------------------------------
+   Feedbox brief — reading styles
+   Tuned for phone reading: 1rem body, 1.5 body leading, ~62ch measure.
+   --------------------------------------------------------------- */
+
+:root {
+  color-scheme: light dark;
+
+  --paper:      light-dark(#fcfbf8, #15171a);
+  --ink:        light-dark(rgb(26, 25, 22), #e4e3de);
+  --ink-strong: light-dark(#0b0c0d, #fbfaf7);
+  --muted:      light-dark(#63676c, #9a9d9f);
+  --accent:     light-dark(#2a4b8d, #9fb8e8);
+  --rule:       light-dark(#e4e2db, #2c3036);
+
+  --serif: "Noto Serif", Georgia, "Times New Roman", serif;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --measure: 62ch;
+  --leading: 1.5;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding-block: clamp(2rem, 6vw, 4.5rem) 4rem;
+  padding-inline: max(1.25rem, env(safe-area-inset-left)) max(1.25rem, env(safe-area-inset-right));
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 1rem;
+  line-height: var(--leading);
+  overflow-wrap: break-word;
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  hanging-punctuation: first last;
+}
+
+article {
+  max-width: var(--measure);
+  margin-inline: auto;
+}
+
+/* --- headings ------------------------------------------------- */
+
+h1 {
+  margin: 0 0 0.25em;
+  font-size: clamp(1.75rem, 1.4rem + 1.8vw, 2.5rem);
+  line-height: 1.15;              /* tight — display sizes need less */
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  color: var(--ink-strong);
+  text-wrap: balance;
+}
+
+h2 {
+  margin: 2.75em 0 0.9em;
+  font-size: 1em;
+  line-height: 1.3;
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.dateline {
+  margin: 0 0 2.5em;
+  font-family: var(--sans);
+  font-size: 0.8em;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* --- body ----------------------------------------------------- */
+
+p {
+  margin: 0 0 1.35em;
+  line-height: var(--leading);
+  text-wrap: pretty;
+  hyphens: auto;                  /* stops long words wrecking a 360px column */
+}
+
+strong {
+  font-weight: 650;
+  color: var(--ink-strong);
+}
+
+a {
+  color: var(--accent);
+  text-decoration-line: underline;
+  text-decoration-thickness: from-font;
+  text-underline-offset: 0.18em;
+  text-decoration-color: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+a:hover { text-decoration-color: currentColor; }
+
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.85em;              /* monospace runs large next to a serif */
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--ink) 8%, transparent);
+  word-break: break-word;
+}
+
+/* --- talking points ------------------------------------------- */
+
+ol.points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: point;
+}
+
+ol.points > li {
+  counter-increment: point;
+  position: relative;
+  padding-left: 2.1em;
+  margin-bottom: 1.5em;
+  line-height: var(--leading);
+  text-wrap: pretty;
+}
+
+ol.points > li::before {
+  content: counter(point);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.4em;
+  font-size: 1.05em;
+  line-height: inherit;
+  text-align: right;
+  color: var(--accent);
+  font-variant-numeric: lining-nums;
+}
+
+/* --- plain lists ---------------------------------------------- */
+
+ul {
+  margin: 0 0 1.35em;
+  padding-left: 1.4em;
+}
+
+ul li {
+  margin-bottom: 0.5em;
+  line-height: var(--leading);
+  text-wrap: pretty;
+}
+
+</style>
+</head>
+<body>
+
+<!--
+  Rendered by scripts/render.py — the markdown brief is the source of truth.
+  Placeholders: {{PAGE_TITLE}} {{TITLE}} {{DATETIME}} {{DATELINE}} {{BODY}}
+
+  Structure. Every element below is styled; nothing else is needed.
+
+    h1              title
+    p.dateline      date, set in the sans utility face
+    p               body paragraph, strong for the load-bearing claim
+    h2              section label (uppercase, sans, muted)
+    ol.points       numbered talking points
+    ul              plain bullets
+
+  Type scale and leading, if you want to retune:
+    body    1rem fixed, line-height 1.5           (--leading)
+    h1      28px -> 40px fluid, line-height 1.15
+    small   0.9em, line-height 1.65
+    measure 62ch                                  (--measure)
+
+  Long leading is what makes a phone column readable; short leading is what
+  makes a big heading look set rather than spaced out. Change --leading and
+  the body, list items and paragraphs all move together.
+-->
+
+<article>
+  <header>
+    <h1>{{TITLE}}</h1>
+    <p class="dateline"><time datetime="{{DATETIME}}">{{DATELINE}}</time></p>
+  </header>
+
+{{BODY}}
+
+</article>
+
+</body>
+</html>
