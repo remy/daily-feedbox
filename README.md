@@ -9,8 +9,9 @@ them into `dist/`:
 
 - `YYYY-MM-DD.html` — one page per brief, so a link sent to someone keeps working
 - `index.html` — a copy of the newest day
+- `brief.md` — the newest brief's markdown, verbatim, at `/brief.md`
 - `archive.html` — every brief, oldest to newest
-- `_headers` — Netlify cache rules; the front page and archive revalidate, dated pages cache for 10 minutes
+- `_headers` — Netlify rules; the front page, archive and `brief.md` revalidate (and `brief.md` is served as UTF-8 markdown), dated pages cache for 10 minutes
 
 Each page ends with a footer listing the seven most recent briefs plus a link to
 the full archive. That list is generated at build time, so adding a day no longer
