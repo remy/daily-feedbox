@@ -5,7 +5,7 @@
  *   node build.js [--src briefs] [--out dist] [--recent 7]
  *
  * Every briefs/YYYY-MM-DD.md becomes a dated page. The newest is also
- * index.html, and archive.html lists the lot. Nothing is pruned: drop a
+ * index.html, brief.md is its markdown, and archive.html lists the lot. Nothing is pruned: drop a
  * markdown file in and it gets a page, so the archive only ever grows.
  *
  * The markdown is the source of truth, and only the subset the brief uses is
@@ -442,6 +442,10 @@ function main() {
   // index.html is a copy of the newest day, so the two can never drift.
   writeFileSync(join(outDir, 'index.html'), readFileSync(join(outDir, `${newest}.html`)));
 
+  // brief.md is the newest brief's markdown, verbatim, for anything that wants
+  // the source rather than the page. It was already validated by the render above.
+  writeFileSync(join(outDir, 'brief.md'), readFileSync(found.get(newest)));
+
   writeFileSync(join(outDir, 'archive.html'), renderArchive(days, template));
 
   writeFileSync(
@@ -450,13 +454,16 @@ function main() {
       '  Cache-Control: public, max-age=0, must-revalidate\n' +
       '/archive.html\n' +
       '  Cache-Control: public, max-age=0, must-revalidate\n' +
+      '/brief.md\n' +
+      '  Content-Type: text/markdown; charset=utf-8\n' +
+      '  Cache-Control: public, max-age=0, must-revalidate\n' +
       '/*.html\n' +
       '  Cache-Control: public, max-age=600\n',
   );
 
   console.log(`front page: ${newest} (${longDate(days[0])})`);
   console.log(
-    `wrote ${opts.out}/ — ${stamps.length} dated page(s) + index.html + archive.html + _headers, ` +
+    `wrote ${opts.out}/ — ${stamps.length} dated page(s) + index.html + brief.md + archive.html + _headers, ` +
       `${blocks} body blocks, footer lists ${recent.length}`,
   );
 
