@@ -1,0 +1,59 @@
+name: Drive sync
+
+# Pulls briefs from Drive into briefs/ and pushes; Netlify deploys on push.
+
+on:
+  schedule:
+    - cron: "17 * * * *"   # hourly, off the top of the hour
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: drive-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Authenticate to Google
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GDRIVE_SA_KEY }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/drive.readonly
+
+      - name: Pull briefs
+        id: pull
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+          FOLDER_ID: ${{ vars.DRIVE_FOLDER_ID }}
+        run: |
+          bash .github/scripts/drive-sync.sh > pulled.txt
+          cat pulled.txt
+          echo "count=$(wc -l < pulled.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Check build
+        if: steps.pull.outputs.count != '0'
+        run: node build.js --out "$RUNNER_TEMP/dist"
+
+      - name: Commit and push
+        run: |
+          git add briefs .drive-sync/seen.tsv
+          git diff --cached --quiet && exit 0
+          if git diff --cached --quiet -- briefs; then
+            # State only: [skip ci] also stops Netlify building
+            msg="chore: drive sync state [skip ci]"
+          else
+            msg="Add briefs from Drive: $(git diff --cached --name-only -- briefs | xargs -n1 basename | paste -sd' ')"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "$msg"
+          git pull --rebase
+          git push
