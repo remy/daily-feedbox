@@ -225,25 +225,23 @@ Underneath the files, in the message rather than in the brief, say what the edit
 - **any day with no brief** — `prepare.py` names them. This one also goes in the notification, not just the notes: it is the only way the reader learns a day went missing
 - anything `ledger.py` warned about: history that shrank, or carried-forward entries stripped of their titles
 - threads carried over from a recent brief, and anything you dropped because it had already gone out — a suppressed story should never be invisible
-- a failed ledger upload, or a brief file that did not reach `feedbox/reports/`
+- a failed ledger upload, a brief file that did not reach `feedbox/reports/`, or a push to `remy/daily-feedbox` that did not land
 
 These are notes on the run, not part of the reader's ninety seconds, so they never enter the markdown or the HTML. A clean run still gets them: "nothing dropped, all bodies fetched" is one line and tells the reader the silence is real. If there is nothing to say under a heading, leave it out rather than writing "none".
 
 ### Push to the site
 
-The brief has a permanent home at a Netlify site, and that is where the reader actually reads it: one bookmark, current every morning, no conversation to dig out. Do this before the Artifact step below — when the deploy succeeds, the Artifact is redundant and should be skipped.
+The brief's permanent home is daily-feedbox.netlify.app, built by Netlify from the GitHub repo `remy/daily-feedbox` on every push to `main`. That is where the reader actually reads it: one bookmark, current every morning, no conversation to dig out. Do this before the Artifact step below — when the push succeeds, the Artifact is redundant and should be skipped.
 
-Assemble the site from the archive, not just from the current day:
+The repo's `build.js` renders every `briefs/YYYY-MM-DD.md` into the site — dated pages, `index.html`, `archive.html`, `brief.md`. **Push the markdown only.** The HTML is built there; a rendered file in the repo is ignored at best.
 
-1. Fetch the last 14 `brief-YYYY-MM-DD.html` files from `feedbox/reports/` into a local directory, and put the page you rendered this run alongside them. Large downloads arrive base64 and are auto-saved to disk — the same mechanics as the dump.
-2. `python3 <skill-dir>/scripts/publish.py <that-directory> --out site --keep 14`
-3. Deploy the whole `site/` directory to the Netlify project with the Netlify connector's deploy tools.
+1. **Attach the repo.** Call `add_repo` with owner `remy`, repo `daily-feedbox`, access `push` (load it through ToolSearch if it is deferred). Do not probe GitHub first with `curl` or `gh` — unauthenticated checks return 404 for a private repo, and the `gh` token in the workspace is not the one that pushes.
+2. **Clone once.** `git clone --depth 1 https://github.com/remy/daily-feedbox <repo-dir>`, with a long command timeout (about ten minutes). If `<repo-dir>` already holds a clone (`git -C <repo-dir> rev-parse HEAD` succeeds), use it and `git -C <repo-dir> pull --rebase` instead. A 429 is the session's own concurrency cap: wait five seconds and retry once.
+3. **Add the brief.** Copy the markdown to `<repo-dir>/briefs/YYYY-MM-DD.md`, dated from `meta.window.to`. No `brief-` prefix: the filename sets the page URL and must match the H1's date. If that file already exists with different content, that day has already gone out — leave it, and say so in the run notes rather than overwriting a published brief.
+4. **Build it.** `node <repo-dir>/build.js --out <scratch>/dist` must exit zero. It enforces the same markdown subset as `render.py`, so a failure here means the markdown is wrong: fix it, re-run `check.py`, render again. Never push a brief the build rejects — Netlify would fail the deploy and the site would stay on the previous day.
+5. **Commit and push.** Stage only that file. Message: `Add brief YYYY-MM-DD`. Set `user.name` and `user.email` for the commit if git has none. Then `git fetch origin main`, `git rebase origin/main`, `git push origin HEAD:main`. Never force-push: the repo is the archive.
 
-`publish.py` makes the newest day `index.html`, gives every kept day its own dated page, and appends the date list to each. It prints any gap in the archive — a day with no brief — which is a second place that failure shows up.
-
-**Deploy the whole directory every time.** Netlify replaces the site with what you send, so a partial deploy deletes the archive. `publish.py` writes a complete directory; deploy that, not a single file.
-
-If the Netlify connector is not available to the run, or the deploy fails: deliver the files as normal, say in one line of the run notes that the site was not updated, and fall through to the Artifact step. Never retry in a loop, and never hold the brief back over it.
+If the repo cannot be attached, or the build or push fails: deliver the files as normal, say in one line of the run notes that the site was not updated and why, and fall through to the Artifact step. Never retry in a loop, and never hold the brief back over it.
 
 ### Publish the page, when the run can
 
