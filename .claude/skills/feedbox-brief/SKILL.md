@@ -13,6 +13,21 @@ The exception is `liked`. That is the reader's own verdict on something they rea
 
 This normally runs unattended on a schedule. Nobody is watching, so never end a run by asking a question. Deliver the brief you have, or say plainly why there isn't one.
 
+## Run order
+
+Every run does all of these, in this order. Steps 7–9 are not optional extras: the ledger is tomorrow's memory, and the push is the deploy. A run that writes a good brief but skips them has left the site stale and the next brief blind.
+
+1. **Locate** the dump and the newest ledger in Drive, and fetch all of it.
+2. **Already written?** Check `briefs/` in the repo and `feedbox/reports/` in Drive for the date in `meta.window.to` (see **Already written** under **Locate**).
+3. **Prepare** with `prepare.py`. Stop on a stale dump.
+4. **Read** and **Write** the brief.
+5. **Verify** with `check.py` until clean.
+6. **Render** the HTML.
+7. **Record** the ledger with `ledger.py`, and upload it to `feedbox/state/`.
+8. **Upload** the markdown and HTML to `feedbox/reports/`.
+9. **Commit and push** the markdown to `main` on `remy/daily-feedbox` (see **Push to the site**). Fall back to the Artifact only if the push fails.
+10. **Deliver** the files and run notes, and notify only when something needs the reader.
+
 ## Locate
 
 The dump lives flat in the Google Drive `feedbox/` directory, overwritten each night by a NAS cronjob at 22:30. There are no dated subdirectories — the files in `feedbox/` are always the latest dump.
@@ -30,6 +45,16 @@ Two subdirectories are this skill's own rather than the NAS's. `feedbox/reports/
 A missing ledger entirely is only *not* an error on the very first run. If `feedbox/reports/` already holds briefs for recent days, the chain has broken rather than never started: carry on, write the brief, and say so plainly in the run notes.
 
 Because the files are overwritten in place, the directory looks identical whether the job ran last night or failed a week ago. **The folder tells you nothing about freshness.** The only evidence is `meta.window.to` inside the dump, so the age check below is the real guard, not a formality. If it stops the run, that is the intended behaviour — report the date found and write nothing.
+
+### Already written
+
+Before writing anything, check two places for the date in `meta.window.to`: `briefs/YYYY-MM-DD.md` on the repo's `main` (`git fetch origin main`, then `git ls-tree --name-only FETCH_HEAD briefs/`), and `brief-YYYY-MM-DD.md` in `feedbox/reports/`.
+
+- **In the repo.** The brief for this window has already gone out. Stop, say so, and do not write a second one or touch the ledger.
+- **In Drive but not in the repo.** It was written but never published. Do not write a second one, and do not touch the ledger: the ledger for that date already exists. Download the Drive copy, run `check.py` on it against this dump, and fix any FAIL from the bodies. Then commit and push it as **Push to the site** describes. Put the fix in the run notes.
+- **In neither.** Write the brief as normal.
+
+In every case, compare `briefs/` on `main` with `feedbox/reports/`. Any dated brief in Drive that is missing from the repo was never published. Add it to the same commit, and name the dates in the run notes and the notification. Never overwrite a date the repo already holds.
 
 ## Input
 
@@ -231,19 +256,27 @@ These are notes on the run, not part of the reader's ninety seconds, so they nev
 
 ### Push to the site
 
-The brief's permanent home is daily-feedbox.netlify.app, built by Netlify from the GitHub repo `remy/daily-feedbox` on every push to `main`. That is where the reader actually reads it: one bookmark, current every morning, no conversation to dig out. Do this before the Artifact step below — when the push succeeds, the Artifact is redundant and should be skipped.
+The brief's permanent home is daily-feedbox.netlify.app, built by Netlify from the GitHub repo `remy/daily-feedbox` on every push to `main`. That is where the reader actually reads it: one bookmark, current every morning, no conversation to dig out. **A successful push to `main` is the deploy.** Do it only once `check.py` is clean, the ledger is written and uploaded, and the Drive uploads are done. When the push succeeds, skip the Artifact step below.
 
-The repo's `build.js` renders every `briefs/YYYY-MM-DD.md` into the site — dated pages, `index.html`, `archive.html`, `brief.md`. **Push the markdown only.** The HTML is built there; a rendered file in the repo is ignored at best.
+The repo's `build.js` renders every `briefs/YYYY-MM-DD.md` into the site at deploy time: dated pages, `index.html`, `archive.html`, `brief.md`. **Push the markdown only.** Netlify builds the HTML; a rendered file in the repo is ignored at best.
 
-1. **Attach the repo.** Call `add_repo` with owner `remy`, repo `daily-feedbox`, access `push` (load it through ToolSearch if it is deferred). Do not probe GitHub first with `curl` or `gh` — unauthenticated checks return 404 for a private repo, and the `gh` token in the workspace is not the one that pushes.
-2. **Clone once.** `git clone --depth 1 https://github.com/remy/daily-feedbox <repo-dir>`, with a long command timeout (about ten minutes). If `<repo-dir>` already holds a clone (`git -C <repo-dir> rev-parse HEAD` succeeds), use it and `git -C <repo-dir> pull --rebase` instead. A 429 is the session's own concurrency cap: wait five seconds and retry once.
-3. **Add the brief.** Copy the markdown to `<repo-dir>/briefs/YYYY-MM-DD.md`, dated from `meta.window.to`. No `brief-` prefix: the filename sets the page URL and must match the H1's date. If that file already exists with different content, that day has already gone out — leave it, and say so in the run notes rather than overwriting a published brief.
-4. **Build it.** `node <repo-dir>/build.js --out <scratch>/dist` must exit zero. It enforces the same markdown subset as `render.py`, so a failure here means the markdown is wrong: fix it, re-run `check.py`, render again. Never push a brief the build rejects — Netlify would fail the deploy and the site would stay on the previous day.
-5. **Commit and push.** Stage only that file. Message: `Add brief YYYY-MM-DD`. Set `user.name` and `user.email` for the commit if git has none. Then `git fetch origin main`, `git rebase origin/main`, `git push origin HEAD:main`. Never force-push: the repo is the archive.
+Do not use the Netlify connector or its deploy command. The `netlify-mcp.netlify.app` host is blocked by egress policy and always fails. Do not assemble a site directory from the Drive archive, and do not run `build.js` or any other repo code. Netlify builds on its own, and a malformed brief failing the deploy is the intended safety net.
 
-If the repo cannot be attached, or the build or push fails: deliver the files as normal, say in one line of the run notes that the site was not updated and why, and fall through to the Artifact step. Never retry in a loop, and never hold the brief back over it.
+1. **Use the clone in the working directory.** The scheduled session starts with the repo already cloned there, usually on a `claude/` branch. Do not clone it again. Only if no clone exists, call `add_repo` (owner `remy`, repo `daily-feedbox`, access `push`) and clone it once.
+2. **Work from `main` in a worktree.** Leave the session branch alone:
+   ```
+   git -C <repo> fetch origin main
+   git -C <repo> worktree add <scratch>/main-wt FETCH_HEAD
+   ```
+3. **Add the brief.** Copy the markdown to `<scratch>/main-wt/briefs/YYYY-MM-DD.md`, dated from `meta.window.to`. No `brief-` prefix: the filename sets the page URL and must match the H1's date. Add any unpublished earlier dates found under **Already written**. If a file already exists there, that day has gone out. Leave it, and say so in the run notes rather than overwriting a published brief.
+4. **Commit only the brief files.** `git add briefs/YYYY-MM-DD.md` by name, never `git add -A`. Keep the dump, `working.json`, the rendered HTML and the ledger out of the repo: write them to the scratchpad. Message: `Add brief YYYY-MM-DD`, or `Add briefs YYYY-MM-DD to YYYY-MM-DD` for a backfill. Set `user.name` and `user.email` for the commit if git has none.
+5. **Push to `main`.** `git push origin HEAD:main`. If the push is rejected because `main` moved, run `git fetch origin main && git rebase FETCH_HEAD` once and push again. Never force-push: the repo is the archive. Then remove the worktree with `git -C <repo> worktree remove <scratch>/main-wt`.
 
-### Publish the page, when the run can
+If the push is refused, say so plainly in the run notes and the notification, quoting the exact error line. Then publish the Artifact as the fallback and deliver the files as normal. Never retry in a loop, and never hold the brief back over it.
+
+### Publish the page, when the push fails
+
+Skip this section entirely when the push to `main` succeeded.
 
 A file in a chat lives in that chat. The reader gets the brief on a schedule and may open it days later, from a phone, without the conversation to hand, so a page with its own address is worth more than an attachment — and it is the same brief either way, so this costs the edit nothing.
 
